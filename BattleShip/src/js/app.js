@@ -1,4 +1,5 @@
-//import { ethers } from "ethers";
+const { ethers } = require('ethers');
+
 
 var gameId = null;
 var deposit = null;
@@ -6,7 +7,7 @@ var board_size = null;
 var counter_ship = null;
 var proposed_deposit = null;
 var creator = null;
-
+var tmp = ethers.isAddressable("xbsbd");
 
 //var merkleTree = null;
 // var merkleRoot = null;
@@ -17,20 +18,21 @@ var creator = null;
 // var isMyTurn = false;
 // var iWasAccused = false;
 
+
 App = {
   web3Provider: null,
   contracts: {},
 
-  init: async function() {
+  init: async function () {
     return await App.initWeb3();
   },
 
-  initWeb3: async function() {
+  initWeb3: async function () {
     if (window.ethereum) {
       App.web3Provider = window.ethereum;
       try {
         await window.ethereum.enable();
-      } catch(error) {
+      } catch (error) {
         console.error("User denied account access");
       }
     }
@@ -40,13 +42,13 @@ App = {
     else {
       App.web3Provider = new web3.provider.HttpProvider("http://localhost:7545");
     }
-    web3 = new Web3(App.web3Provider);
+    const web3 = new Web3(App.web3Provider);
     web3.eth.defaultAccount = web3.eth.accounts[0];
     return App.initContract();
   },
 
-  initContract: async function() {
-    $.getJSON("BattleShip.json", function(data) {
+  initContract: async function () {
+    $.getJSON("BattleShip.json", function (data) {
       var BattleShipArtifact = data;
       App.contracts.BattleShip = TruffleContract(BattleShipArtifact);
       App.contracts.BattleShip.setProvider(App.web3Provider);
@@ -54,7 +56,7 @@ App = {
     return App.bindEvents();
   },
 
-  bindEvents: async function() {  // All functions to call when click on buttons in HTML page
+  bindEvents: async function () {
     document.getElementById("createNewGame-btn").onclick = App.newGameView;
     document.getElementById("createGame-btn").onclick = App.createGame;
     document.getElementById("findGameRandom-btn").addEventListener("click", App.findGameRandom);
@@ -67,50 +69,50 @@ App = {
     document.getElementById("acceptPropose-btn").addEventListener("click", App.cceptPropose);
     document.getElementById("declinePropose-btn").addEventListener("click", App.eclinePropos);
     document.getElementById("submitAccuse-btn").addEventListener("click", App.submitAccuse);
-  
+
     console.log("Button listeners loaded!");
-  
+
   },
 
-  newGameView: function() {
+  newGameView: function () {
     document.getElementById('mainMenu').style.visibility = "hidden";
     document.getElementById('creationGame').style.visibility = "visible";
-    
+
     console.log("AAAAA");
   },
 
-  findGameRandom: function() {
+  findGameRandom: function () {
     App.findGame(true);
   },
 
-  findIdGame: function() {
+  findIdGame: function () {
     App.findGame(false);
   },
 
-  backToMainMenu: function() {
+  backToMainMenu: function () {
     $('mainMenu').show();
     $('waitingRoomCreator').hide();
     $('waitingRoomPlayer').hide();
 
-    if(creator) {
+    if (creator) {
       App.contracts.BattleShip.deployed().then(async function (instance) {
-      battleshipInstace = instance;
-      return battleshipInstance.deleteGame(gameId);
+        battleshipInstace = instance;
+        return battleshipInstance.deleteGame(gameId);
       });
     }
   },
 
-  createGame: async function() {
+  createGame: async function () {
     board_size = document.getElementById("selectValue").value;
     deposit = document.getElementById("depositInput").value;
     creator = true;
 
-    if(!board_size || !deposit) {
+    if (!board_size || !deposit) {
       alert("You must insert values to create a game");
     } else {
-      if(deposit <= 0) {
-      alert("Deposit must be greater than 0")
-      return;
+      if (deposit <= 0) {
+        alert("Deposit must be greater than 0");
+        return;
       }
 
       //Call smart contract function, adding also the amount of eths to pay deposit.
@@ -118,11 +120,11 @@ App = {
         battleshipInstance = instance;
         return battleshipInstance.createGame(board_size, deposit, { value: deposit });
       }).then(async function (event) {
-      gameId = event.logs[0].args.id.toNumber();
-      console.log("Inside smart contract function");
-      document.getElementById("infoWaitingRoom").innerHTML = `<h1>Your gameId: ${gameId}.</h1>`;
+        gameId = event.logs[0].args.gameId.toNumber();
+        console.log("Inside smart contract function");
+        document.getElementById("infoWaitingRoom").innerHTML = `<h1>Your gameId: ${gameId}.</h1>`;
 
-      }).catch(function(err) {
+      }).catch(function (err) {
         console.log(err.message);
         App.backToMainMenu();
       });
@@ -134,29 +136,29 @@ App = {
     App.handleEvent();
   },
 
-  configureBoard: function(size) {
+  configureBoard: function (size) {
     var arr = Array.from(Array(size), () => new Array(size));
     return arr;
   },
 
-  payDeposit: function() {
+  payDeposit: function () {
     $('waitingRoom').hide();
     $('gameMonitor').show();
 
     App.contracts.BattleShip.deployed().then(async function (instance) {
       battleshipInstace = instance;
-      return battleshipInstance.payDeposit(gameId, { value: ethers.utils.parseEther(deposit) });
+      return battleshipInstance.payDeposit(gameId, { value: deposit });
     }).then(async function (event) {
-    gameId = event.logs[0].args.gameId.toNumber();
+      gameId = event.logs[0].args.gameId.toNumber();
 
-    }).catch(function(err) {
+    }).catch(function (err) {
       console.log(err.message);
     });
   },
 
-  findGame: function(rand) {
- //Find game with id, if there is a game,
-    if(!rand) {
+  findGame: function (rand) {
+    //Find game with id, if there is a game,
+    if (!rand) {
       var identifier = document.getElementById("gameIdentifier").value;
 
       App.contracts.BattleShip.deployed().then(async function (instance) {
@@ -164,15 +166,15 @@ App = {
         return battleshipInstance.joinGameId(identifier);
       }).then(async function (event) {
 
-      gameId = event.logs[0].args.gameId.toNumber();
-      counter_ship = event.logs[0].args.counter_ships_creator.toNumber();
-      board_size = event.logs[0].args.board.toNumber();
-      deposit = event.logs[0].args.deposit.toNumber();   
+        gameId = event.logs[0].args.gameId.toNumber();
+        counter_ship = event.logs[0].args.counter_ships_creator.toNumber();
+        board_size = event.logs[0].args.board.toNumber();
+        deposit = event.logs[0].args.deposit.toNumber();
 
-      creator_board = configureBoard(board_size);
-      player_board = configureBoard(board_size);
+        creator_board = configureBoard(board_size);
+        player_board = configureBoard(board_size);
 
-      }).catch(function(err) {
+      }).catch(function (err) {
         console.log(err.message);
         App.backToMainMenu();
       });
@@ -182,15 +184,15 @@ App = {
         return battleshipInstance.joinGameRandom();
       }).then(async function (event) {
 
-      gameId = event.logs[0].args.gameId.toNumber();
-      count_ship = event.logs[0].args.counter_ships_creator.toNumber();
-      board_size = event.logs[0].args.board.toNumber();
-      deposit = event.logs[0].args.deposit.toNumber();
+        gameId = event.logs[0].args.gameId.toNumber();
+        count_ship = event.logs[0].args.counter_ships_creator.toNumber();
+        board_size = event.logs[0].args.board.toNumber();
+        deposit = event.logs[0].args.deposit.toNumber();
 
-      creator_board = configureBoard(board_size);
-      player_board = configureBoard(board_size);
+        creator_board = configureBoard(board_size);
+        player_board = configureBoard(board_size);
 
-      }).catch(function(err) {
+      }).catch(function (err) {
         console.log(err.message);
         App.backToMainMenu();
       });
@@ -201,7 +203,7 @@ App = {
     App.handleEvent();
   },
 
-  submitPropose: function() {
+  submitPropose: function () {
     proposed_deposit = document.getElementById("proposeNewDeposit").value;
 
     App.contracts.BattleShip.deployed().then(async function (instance) {
@@ -216,27 +218,26 @@ App = {
   },
 
 
-  handleEvent: async function() {
+  handleEvent: async function () {
 
-    await battleshipInstance.allEvent (
+    await battleshipInstance.allEvent(
       (err, events) => {
 
-        if(events.args.gameId.toNumber() != gameId) {
+        if (events.args.gameId.toNumber() != gameId) {
           console.log("Different Game Id");
           return;
         }
 
-        if(events.event == "PaidDeposit") {
+        if (events.event == "PaidDeposit") {
           $('gameMonitor').show();
           $('waitingRoomCreator').hide();
           $('waitingRoomPlayer').hide();
 
           //Display board table...
+        } else if (events.event == "ProposedDeposit") {
 
-        } else if(events.event == "ProposedDeposit") {
+          if (confirm('New Propose from Player:' + events.event.args.new_amount + '. Accept?')) {
 
-          if(confirm('New Propose from Player:' + events.event.args.new_amount + '. Accept?')) {
-              
             App.contracts.BattleShip.deployed().then(async function (instance) {
               battleshipInstace = instance;
               return battleshipInstance.changeDeposit(gameId);
@@ -244,16 +245,16 @@ App = {
               deposit = event.logs[0].args.eths.toNumber();
             });
           }
-        } else if(events.event == "ChangeDeposit") {
+        } else if (events.event == "ChangeDeposit") {
           document.getElementById("depositTitle").innerHTML = `<h1>Your gameId: ${gameId}. New deposit for game: ${deposit}. Board size: ${board_size}</h1>`;
         }
       }
-    )
+    );
   }
-}
-
+};
 $(function () {
   $(window).load(function () {
     App.init();
   });
 });
+
