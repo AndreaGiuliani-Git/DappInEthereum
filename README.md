@@ -1,6 +1,6 @@
 # Battleship Game in Ethereum
 
-Auhtor: AndreaGiuliani-Git
+Author: AndreaGiuliani-Git
 
 Date: 2023-10-10
 
