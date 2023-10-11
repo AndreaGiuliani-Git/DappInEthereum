@@ -1,223 +1,310 @@
 // SPDX-License-Identifier: MIT 
 pragma  solidity >=0.4.22 <0.9.0;
 
+
+
 contract BattleShip {
 
     struct infoGame{
-        uint256 gameId;
+        uint8 gameId;
         address creator;
         address player;
+        bool free;
+        uint8 counter_ships;
         uint8 counter_ships_creator;
         uint8 counter_ships_player;
         bytes32 merkle_root_creator;
         bytes32 merkle_root_player;
-        uint8 board;
+        uint8[] creator_board;
+        uint8[] player_board;
+        uint8 board_size;
         uint256 deposit;
+        bool end_game;
+        bool cheat;
+        address winner;
         uint256 proposedDeposit;
-        address accused;
+        bool agreement; //Phase 2.1 lock --> on true
+        address accused; //Phase 6 lock
         uint256 acc_time;
-        bool available;
+        bool accuse;
+        address target_address; //Phase 4 --> block shot turn.
+        bool available; //Phase 3 lock --> on false
     }
 
-    event NewGame(uint256 gameId);
-    event ProposedDeposit(uint256 gameId, uint256 actual_amount, uint256 new_amount);
-    event ChangeDeposit(uint256 gameId, uint256 eths);
-    event PaidDeposit(uint256 gameId, bool availability);
-    event SelectGame(uint256 gameId, address creator, address player, uint8 counter_ships_creator, uint8 counter_ships_player, uint8 board, uint256 deposit);
-    event ShotTorpedo(uint256 gameId, address target, uint8 col, uint8 row);
-    event ShotResult(uint256 gameId, bool result, uint8 counter_ships, address target_address);
-    event Cheater(uint256 gameId, bool result, address cheater);
-    event EndGame(uint256 gameId, address winner);
-    event SubmitAccuse(uint256 gameId, address accused, uint256 time);
+    event SubmitMerkleRoot(uint8 gameId, bytes32 merkle_root, address creator);
+    event NewGame(uint8 gameId, uint8 counter_ships, address tx_sender);
+    event ProposedDeposit(uint8 gameId, uint256 actual_amount, uint256 new_amount, address tx_sender);
+    event ChangeDeposit(uint8 gameId, uint256 eths, address tx_sender);
+    event PaidDeposit(uint8 gameId, bool availability, address tx_sender);
+    event SelectGame(uint8 gameId, uint8 counter_ships, uint8 board_size, uint256 deposit, address tx_sender);
+    event ShotTorpedo(uint8 gameId, address target, uint8 col, uint8 row, address tx_sender);
+    event ShotResult(uint8 gameId, bool result, uint8 col, uint8 row, bool end_game, bool cheater, address tx_sender, address shooter_address);
+    event SubmitAccuse(uint8 gameId, address accused, uint256 time, address tx_sender);
+    event DeleteGame(uint8 gameId, address tx_sender);
+    event VerifyAccuse(uint8 gameId, bool accuse, address tx_sender);
+    event RemoveAccuse(uint8 gameId, address tx_sender);
+    event ValidCheck(uint8 gameId, address tx_sender, bool cheat, address opposer);
 
 
-    mapping (uint256 => infoGame) games;
-    uint256[] gameIds;     //array with all gameIds created
-    mapping (uint256 => bool) valid_ids;
+    mapping (uint8 => infoGame) games;
+    uint8[] gameIds;     //array with all gameIds created
+    mapping (uint8 => bool) valid_ids;
+    uint8 id = 0;
 
     constructor(){}
-    /*
-    * Random generator exploiting hash of previous block and the timestamp of actual block
-    */
-    function randomGenerator() private view returns (uint256){
-        return uint256(keccak256(abi.encodePacked(blockhash(block.number - 1), block.timestamp)));
-    }
-
 
     /*
-    * Admitted board size are 8, 16, 32. (reference for 8x8, 16x16, 32x32)
+    * Admitted board size are 4, 8. (reference for 4x4, 8x8)
     */
-    function checkBoard(uint8 tmp) private pure returns (bool){
-        return (tmp == 8 || tmp == 16 || tmp == 32);
+    function checkBoard(uint8 size) private pure returns (bool){
+        return (size == 2 || size == 4 || size == 8);
     }
 
     /*
-    * Creator of game can change deposit when joined player makes a new deposit propose,
-    * and automatically creator accepts the propose.
-    */
-    function changeDeposit(uint256 gameId) public payable{
+        Phase 1:
+            - board of correct size
+            - Eths must be equal to deposit
+            - Until 256 games at the same time
 
-        require(valid_ids[gameId], "Invalid game identifier");
-        require(msg.sender == games[gameId].creator, "Only the game creator can change deposit");
+            Vulnerabilities:
+            - One single creator can have 255 games opened --> DOS attack
+    */ 
+    function createGame(uint8 board_size, uint256 deposit) public payable{
 
-        uint256 proposed_dep = games[gameId].proposedDeposit;
-        uint256 dep = games[gameId].deposit;
+        require(checkBoard(board_size), "Uncorrect board size");
+        require(msg.value == deposit, "Wrong ETHs to create game");
+        require(gameIds.length < 256, "Games space is full.");
+        id++;
+        uint256 len = board_size*board_size;
 
-        if(proposed_dep > dep) {
-            require(msg.value == (proposed_dep - dep), "The new deposit summed to the previous is not equal to the proposed one.");
-            dep += msg.value;
-        } else {
-            uint256 diff = dep - proposed_dep;
-            dep = proposed_dep;
-           payable(msg.sender).transfer(diff);
+        uint8[] memory arr = new uint8[](len);
+
+        for (uint8 i = 0; i < len; i++) {
+            arr[i] = 0;
         }
 
-        games[gameId].deposit = dep;
-        games[gameId].proposedDeposit = proposed_dep;
+        for(uint8 i = 0; i < gameIds.length; i++) {
+            if(gameIds[i] == id) {
+                id++;
+            }
+        }
 
-        emit ChangeDeposit(
-            gameId,
-            games[gameId].deposit
-        );
+        gameIds.push(id);
+
+        games[id] = infoGame (id, msg.sender, address(0), true, 0, 0, 0, 0, 0, arr, arr, board_size, msg.value, false, false, address(0), 0, false, address(0), 0, false, address(0), true);
+        valid_ids[id] = true;
+        if (board_size == 2) {
+            games[id].counter_ships = 2;
+            games[id].counter_ships_player = games[id].counter_ships;
+            games[id].counter_ships_creator = games[id].counter_ships;
+        } else if (board_size == 4) {
+            games[id].counter_ships = 7;
+            games[id].counter_ships_player = games[id].counter_ships;
+            games[id].counter_ships_creator = games[id].counter_ships;
+        } else if (board_size == 8) {
+            games[id].counter_ships = 23;
+            games[id].counter_ships_player = games[id].counter_ships;
+            games[id].counter_ships_creator = games[id].counter_ships;
+        }
+        emit NewGame(id, games[id].counter_ships, msg.sender);
     }
 
-    /*
-    * Player can propose a deposit.
+
+   /*
+        Phase 1.1:
+            - Valid gameId
+            - Only creator can delete him/her game
+            - No agreement with player
+
+            Vulnerabilities:
+
+            +All deposit is sent to the creator when he/she deletes a game.
     */
-    function proposeDeposit(uint256 gameId, uint256 new_deposit) public{
+    function deleteGame(uint8 gameId) public{
 
         require(valid_ids[gameId], "Invalid game identifier");
-        require(new_deposit > 0, "Select a positive amount of ETHs for deposit");
-        require(new_deposit != games[gameId].deposit, "Choose a different amount of ETHs for deposit than before");
+        require(msg.sender == games[gameId].creator, "Only creator can delete his/her game");
+        require(games[gameId].agreement == false, "There is an agreement with a player, you cannot delete this game.");
         
-        if(msg.sender == games[gameId].player) {
-            games[gameId].proposedDeposit = new_deposit;
-        } else {
-            revert("You have no permission to propose a new deposit");
+        uint256 amount = games[gameId].deposit;
+        games[gameId].deposit = 0;
+        payable(msg.sender).transfer(amount);
+
+        deleteItem(gameIds, gameId);
+        delete(valid_ids[gameId]);
+
+        emit DeleteGame(gameId, msg.sender);
+    }
+
+
+    /*
+        Phase 2:
+            - Game empty from a player
+    */
+    function joinGameRandom() public{
+        require(gameIds.length > 0, "There aren't already games.");
+
+        uint8 rand_id;
+        bool find = false;
+
+
+        for(uint8 i = 0; i < gameIds.length; i++) {
+            if(games[gameIds[i]].free == true) {
+                rand_id = gameIds[i];
+                find = true;
+                break;
+            }
         }
-        emit  ProposedDeposit(
-                gameId,
+
+        require(find, "No available game at this moment");
+        require(msg.sender != games[rand_id].creator, "You are the creator of this game");
+
+        games[rand_id].player = msg.sender;
+        games[rand_id].free = false;
+        emit SelectGame(
+            games[rand_id].gameId,
+            games[rand_id].counter_ships,
+            games[rand_id].board_size,
+            games[rand_id].deposit,
+            msg.sender    
+        );
+
+    }
+
+
+    /*
+        Phase 2:
+            - Available game
+            - An existing gameId
+            - You must be not the creator of the game
+
+            Vulnerabilities:
+    */
+    function joinGameId(uint8 gameId) public{
+
+        require(valid_ids[gameId], "Invalid game identifier");
+        require(games[gameId].free == true, "There are already two players in this game");
+        require(games[gameId].available == true, "Game full, choose another game.");
+        require(games[gameId].creator != msg.sender, "You are the creator of the game");
+
+        games[gameId].player = msg.sender;
+        games[gameId].free = false;
+
+        emit SelectGame(
+                games[gameId].gameId,
+                games[gameId].counter_ships,
+                games[gameId].board_size,
                 games[gameId].deposit,
-                games[gameId].proposedDeposit
+                msg.sender
             );
     }
 
     /*
-    * Function only for player to pay deposit and finally join the game. After the payment
-    * game is not available anymore in the games list.
+        Phase 2.1:
+            - Valid gameId
+            - Only player of this game can propose a deposit
+            - No zero value
+            - No same value of deposit as before
+            - No previous agreement for deposit
+
+            Vulnerabilities
     */
-    function payDeposit(uint256 gameId) public payable{
+    function proposeDeposit(uint8 gameId, uint256 new_deposit) public{
 
         require(valid_ids[gameId], "Invalid game identifier");
+        require(msg.sender == games[gameId].player, "You are not a player in this game");
+        require(new_deposit != 0, "Select a positive amount of ETHs for deposit");
+        require(new_deposit != games[gameId].deposit, "Choose a different amount of ETHs for deposit than before");
+        require(games[gameId].agreement == false, "Creator has already accepted a propose");
+        
+        games[gameId].proposedDeposit = new_deposit;
+        
+        emit  ProposedDeposit(
+                gameId,
+                games[gameId].deposit,
+                games[gameId].proposedDeposit,
+                msg.sender
+            );
+    }
 
-        if(msg.sender != games[gameId].player) {
-            revert("You have no permission to propose a new deposit");
+
+    /*
+        Phase 2.2:
+            - Valid gameId
+            - Only player of this game can propose a deposit
+            - No zero value
+            - No same value of deposit as before
+            - No previous agreement for deposit
+
+            Vulnerabilities
+    */
+    function changeDeposit(uint8 gameId) public payable{
+
+        require(valid_ids[gameId], "Invalid game identifier");
+        require(msg.sender == games[gameId].creator, "Only the game creator can change deposit");
+
+        if(games[gameId].proposedDeposit > games[gameId].deposit) {
+            require(msg.value == (games[gameId].proposedDeposit - games[gameId].deposit), "The new deposit summed to the previous is not equal to the proposed one.");
+
+            games[gameId].deposit += msg.value;
+        } else {
+            require(msg.value == 0, "Error with propose higher than deposit");
+
+            uint256 diff = games[gameId].deposit - games[gameId].proposedDeposit;
+            games[gameId].deposit = games[gameId].proposedDeposit;
+            payable(msg.sender).transfer(diff);
         }
+        games[gameId].agreement = true;
 
+        emit ChangeDeposit(
+            gameId,
+            games[gameId].deposit,
+            msg.sender
+        );
+    }
+
+
+    /*
+        Phase 3:
+            - Valid gameId
+            - Only player can pay to start the game
+            - Eths in transaction must be equal to the deposit
+            - No previous agreement 
+
+            Vulnerabilities
+    */
+    function payDeposit(uint8 gameId) public payable{
+
+        require(valid_ids[gameId], "Invalid game identifier");
+        require(msg.sender == games[gameId].player, "You are not player of this game");
         require(msg.value == games[gameId].deposit, "Wrong ETHs to join game");
+        require(games[gameId].available == true, "You have already pay deposit");
+
+        games[gameId].agreement = true;
         games[gameId].deposit += msg.value;
         games[gameId].available = false;
 
         emit PaidDeposit(
             gameId,
-            games[gameId].available);
+            games[gameId].available,
+            msg.sender
+        );
     }
+
 
     /*
-    * Removes a specific game at the end of the game, from gamesIds array and from
-    * games map.
+        Phase 4:
+            - Valid gameId
+            - Only players of game can submit merkleRoot
+            - No previous merkleRoot stored 
+            - 0 value for merkle root is not accepted
+
+            Vulnerabilities
     */
-    function deleteGame(uint gameId) public{
+    function submitMerkleRoot(uint8 gameId, bytes32 merkle_root) public{
 
         require(valid_ids[gameId], "Invalid game identifier");
-        
-        uint8 index;
-
-        for(uint8 i = 0; i < gameIds.length - 1; i++) {
-            if(gameId == gameIds[i]) {
-                index = i;
-            }
-        }
-
-        for(uint8 i = index; i < gameIds.length - 1; i++) {
-            gameIds[i] = gameIds[i + 1];
-        }
-
-        gameIds.pop();
-        delete(games[gameId]);
-        delete(valid_ids[gameId]);
-    }
-
-
-    function createGame(uint8 board, uint256 deposit) public payable{
-
-        require(checkBoard(board), "Uncorrect board size");
-        require(deposit > 0, "Select a positive amount of ETHs for deposit");
-        require(msg.value == deposit, "Wrong ETHs to create game");
-
-        uint256 id = randomGenerator();
-        gameIds.push(id);
-        games[id] = infoGame (id, msg.sender, address(0), 0, 0, 0, 0, board, msg.value, 0,address(0), 0, true);
-        valid_ids[id] = true;
-
-        if (board == 8) {
-            games[id].counter_ships_creator = 23;
-            games[id].counter_ships_player = 23;
-        } else if (board == 16) {
-            games[id].counter_ships_creator = 42;
-            games[id].counter_ships_player = 42;
-        } else {
-            games[id].counter_ships_creator = 71;
-            games[id].counter_ships_player = 71;
-        }
-        
-        emit NewGame(id);
-    }
-
-
-    function joinGameRandom() public{
-
-        uint256 rand_id;
-        rand_id = gameIds[randomGenerator() % gameIds.length];
-        require(games[rand_id].available == true, "Game full, choose another game.");
-
-        games[rand_id].player = msg.sender;
-
-        emit SelectGame(
-            games[rand_id].gameId,
-            games[rand_id].creator,
-            games[rand_id].player,
-            games[rand_id].counter_ships_creator,
-            games[rand_id].counter_ships_player,
-            games[rand_id].board,
-            games[rand_id].deposit
-        );
-
-    }
-
-
-    function joinGameId(uint256 gameId) public{
-
-        require(valid_ids[gameId], "Invalid game identifier");
-        require(games[gameId].available == true, "Game full, choose another game.");
-
-        games[gameId].player = msg.sender;
-
-        emit SelectGame(
-                games[gameId].gameId,
-                games[gameId].creator,
-                games[gameId].player,
-                games[gameId].counter_ships_creator,
-                games[gameId].counter_ships_player,
-                games[gameId].board,
-                games[gameId].deposit
-
-            );
-    }
-
-    function submitMerkleRoot(bytes32 merkle_root, uint256 gameId) public{
-
-        require(valid_ids[gameId], "Invalid game identifier");
+        require(merkle_root != 0, "Invalid merkle root");
 
         if (msg.sender == games[gameId].creator) {
             require(games[gameId].merkle_root_creator == 0, "Merkle Root of creator already stored");
@@ -225,156 +312,159 @@ contract BattleShip {
         } else if(msg.sender == games[gameId].player){
             require(games[gameId].merkle_root_player == 0, "Merkle Root of player already stored");
             games[gameId].merkle_root_player = merkle_root;
+            games[gameId].target_address = games[gameId].creator;
         } else {
             revert("You are not creator or player of this game");
         }
+
+        emit SubmitMerkleRoot(gameId, merkle_root, games[gameId].creator);
     }
 
 
-    function shotTorpedo(uint256 gameId,  uint8 col, uint8 row) public{
+    /*
+        Phase 5:
+            - Valid gameId
+            - Only players of game can shot
+            - Ony one shot per turn
+            - Target address must be submitted
+            - Game must be not ended
+            - No cheater
+
+            Vulnerabilities
+
+            + Creator cannot shot until player has submitted the merkle root, and
+            player can't shot first!!
+
+    */
+    function shotTorpedo(uint8 gameId,  uint8 col, uint8 row) public{
 
         require(valid_ids[gameId], "Invalid game identifier");
+        require(games[gameId].target_address != address(0), "Player has not submitted merkle root. Wait");
+        require(games[gameId].target_address == msg.sender, "You can't shot two consecutive times");
+        require(games[gameId].end_game == false, "End Game");
+        require(games[gameId].cheat == false, "Game ended, someone is a cheater");
 
-        address target_address;
         if (msg.sender == games[gameId].creator) {
-            target_address = games[gameId].player;
+            games[gameId].target_address = games[gameId].player;
         } else if (msg.sender == games[gameId].player){
-            target_address = games[gameId].creator;
+            games[gameId].target_address = games[gameId].creator;
         } else {
             revert("You are not creator or player of this game");
         }
 
         emit ShotTorpedo(
             gameId,
-            target_address,
+            games[gameId].target_address,
             col,
-            row
+            row,
+            msg.sender
         );
     }
 
-    function shotResult(uint256 gameId, bool result, bytes32 leaf, bytes32[] memory merkle_proof) public payable{
+
+
+    /*
+        Phase 5.1:
+            - Valid gameId
+            - Only players of game can check 
+            - Game must be not ended
+            - No cheater in the game
+
+            Vulnerabilities
+
+    */
+    function shotResult(uint8 gameId, uint8 col, uint8 row, bool result, bytes32 computed_hash, bytes32[] memory merkle_proof) public payable{
 
         require(valid_ids[gameId], "Invalid game identifier");
-        bytes32 computed_hash = leaf;
+        require(games[gameId].end_game == false, "End Game");
+        require(games[gameId].cheat == false, "Game ended, someone is a cheater");
+
+        uint8 target_index = row * games[gameId].board_size + col;
         address shooter_address;
-        address cheater_address;
 
         if (msg.sender == games[gameId].creator) { 
             shooter_address = games[gameId].player;
 
-            for (uint256 i = 0; i < merkle_proof.length; i++) {
+            for (uint8 i = 0; i < merkle_proof.length; i++) {
 
-                if (leaf <= merkle_proof[i]) {
+                if (target_index % 2 == 0) {
                     // Hash(current computed hash + current element of the proof)
                     computed_hash = keccak256(abi.encodePacked(computed_hash, merkle_proof[i]));
                 } else {
                     // Hash(current element of the proof + current computed hash)
                     computed_hash = keccak256(abi.encodePacked(merkle_proof[i], computed_hash));
                 }
+                target_index = target_index / 2;
         
             }
-            
+
             if(computed_hash == games[gameId].merkle_root_creator) {
+
                 if(result) {
                     games[gameId].counter_ships_creator -= 1;
+                    games[gameId].creator_board[row * games[gameId].board_size + col] = 1;
                 }
-
-                emit ShotResult(
-                    gameId,
-                    result,
-                    games[gameId].counter_ships_creator,
-                    shooter_address
-                );
             } else {
-                //Creator is a cheater, all deposit is sent to Player because Creator's bad beavhiour.
-                cheater_address = msg.sender;
-                emit Cheater(
-                    gameId,
-                    result,
-                    cheater_address
-                );
-
-                uint256 amount = games[gameId].deposit;
-                games[gameId].deposit = 0;
-                payable(games[gameId].player).transfer(amount);
-                deleteGame(gameId);
+                games[gameId].cheat = true;
+                games[gameId].end_game = true;
+                endGameCheater(gameId, shooter_address);
             }
 
             if(games[gameId].counter_ships_creator == 0) {
 
-                //Player is the winner, deposit is sent to both creator and Player because
-                //they played following rules, without cheating.
-                
-                uint256 amount = games[gameId].deposit;
-                games[gameId].deposit = 0;
-                payable(games[gameId].creator).transfer(amount/2);
-                payable(games[gameId].player).transfer(amount/2);
-
-                emit EndGame(gameId, shooter_address);
-                deleteGame(gameId);
+                games[gameId].end_game = true;
             }
 
         } else if (msg.sender == games[gameId].player){
             shooter_address = games[gameId].creator;
 
-            for (uint256 i = 0; i < merkle_proof.length; i++) {
 
-                if (leaf <= merkle_proof[i]) {
+            for (uint8 i = 0; i < merkle_proof.length; i++) {
+
+                if (target_index % 2 == 0) {
                     // Hash(current computed hash + current element of the proof)
                     computed_hash = keccak256(abi.encodePacked(computed_hash, merkle_proof[i]));
                 } else {
                     // Hash(current element of the proof + current computed hash)
                     computed_hash = keccak256(abi.encodePacked(merkle_proof[i], computed_hash));
                 }
-        
+                target_index = target_index/2;
             }
             
             if(computed_hash == games[gameId].merkle_root_player) {
                 if(result) {
                     games[gameId].counter_ships_player -= 1;
+                    games[gameId].player_board[row * games[gameId].board_size + col] = 1;
                 }
-
-                emit ShotResult(
-                    gameId,
-                    result,
-                    games[gameId].counter_ships_player,
-                    shooter_address
-                );
             } else {
-                //Player is a cheater, all deposit is sent to Creator because Player's bad beavhiour.
-                cheater_address = msg.sender;
-                emit Cheater(
-                    gameId,
-                    result,
-                    cheater_address
-                );
-
-                uint256 amount = games[gameId].deposit;
-                games[gameId].deposit = 0;
-                payable(games[gameId].player).transfer(amount);
-                deleteGame(gameId);
+                games[gameId].cheat = true;
+                games[gameId].end_game = true;
+                endGameCheater(gameId, shooter_address);
             }
-
             if(games[gameId].counter_ships_player == 0) {
 
-                //Creator is the winner, deposit is sent to both Creator and Player because
-                //they played following rules, without cheating.
-                
-                uint256 amount = games[gameId].deposit;
-                games[gameId].deposit = 0;
-                payable(games[gameId].creator).transfer(amount/2);
-                payable(games[gameId].player).transfer(amount/2);
-
-                emit EndGame(gameId, shooter_address);
-                deleteGame(gameId);
+                games[gameId].end_game = true;
             }
            
         } else {
             revert("You are not creator or player of this game");
         }
+
+        emit ShotResult(gameId, result, col, row, games[gameId].end_game, games[gameId].cheat, msg.sender, shooter_address);
     }
 
-    function submitAccuse(uint256 gameId) public{
+
+
+    /*
+        Phase 6:
+            - Valid gameId
+            - Only players of game can accuse
+            - No other accused player
+
+            Vulnerabilities
+
+    */
+    function submitAccuse(uint8 gameId) public{
 
         require(valid_ids[gameId], "Invalid game identifier");
         require(games[gameId].accused == address(0), "Accuse already submitted");
@@ -392,27 +482,230 @@ contract BattleShip {
         emit SubmitAccuse(
             gameId,
             games[gameId].accused,
-            games[gameId].acc_time
+            games[gameId].acc_time,
+            msg.sender
         );
 
     }
 
-    function verifyAccuse(uint256 gameId) public payable returns(bool){
+    /*
+        Phase 6.1:
+            - Valid gameId
+            - Only players of game can check accuse
+            - There must be one accuse
+
+            Vulnerabilities
+
+    */
+    function verifyAccuse(uint8 gameId) public payable{
 
         require(valid_ids[gameId], "Invalid game identifier");
         require(games[gameId].accused != address(0), "Accuse was not submitted");
-        bool accuse = false;
+
+        if (msg.sender != games[gameId].creator && msg.sender != games[gameId].player) {
+            revert("You are not creator or player of this game");
+        }
+        if(games[gameId].acc_time <= block.number) {
+            
+            payable(msg.sender).transfer(games[gameId].deposit);
+            games[gameId].accuse = true;
+        }
+        emit VerifyAccuse(gameId, games[gameId].accuse, msg.sender);    
+    }
+
+
+    /*
+        Phase 6.2:
+            - Valid gameId
+            - Only players of game can check accuse
+            - There must be one accuse
+            - Address of accused must be equal to msg.sender
+
+            Vulnerabilities
+
+    */
+    function removeAccuse(uint8 gameId) public{
+        require(valid_ids[gameId], "Invalid game identifier");
+        require(games[gameId].accused != address(0), "Accuse was not submitted");
+        require(games[gameId].accused == msg.sender, "You are not accused");
 
         if (msg.sender != games[gameId].creator && msg.sender != games[gameId].player) {
             revert("You are not creator or player of this game");
         }
 
-        if(games[gameId].acc_time <= block.number) {
-            uint256 amount = games[gameId].deposit;
-            games[gameId].deposit = 0;
-            payable(msg.sender).transfer(amount);
-            accuse = true;
+        games[gameId].accused = address(0);
+        emit RemoveAccuse(gameId, msg.sender);
+        
+    }
+
+
+    /*
+        Phase 7:
+            - Valid gameId
+            - Only players of game can verify the end of game
+            - Game must be finished
+            - No previous cheaters in the game
+
+            Vulnerabilities
+
+    */
+    function verifyEndGame(uint8 gameId, uint256[] memory indexes, uint256[] memory values, uint256[] memory seeds, bytes32[] memory merkle_proofs) public{
+
+        require(valid_ids[gameId], "Invalid game identifier");
+        require(games[gameId].end_game == true, "Game isn't finished");
+        require(games[gameId].cheat == false, "Someone is a cheater");
+
+        bytes32 merkle_root_ver;
+        address opposer;
+        bytes32 computed_hash;
+        uint8 size_merkle_proof;
+
+        if(msg.sender == games[gameId].creator) {
+            opposer = games[gameId].player;
+            merkle_root_ver = games[gameId].merkle_root_creator;
+        } else if(msg.sender == games[gameId].player) {
+            opposer = games[gameId].creator;
+            merkle_root_ver = games[gameId].merkle_root_player;
+        } else {
+            revert("You are not creator or player of this game");
         }
-        return accuse;
+
+        if(games[gameId].board_size == 2) {
+            size_merkle_proof = 2;
+        } else if (games[gameId].board_size == 4) {
+            size_merkle_proof = 4;
+        } else {
+            size_merkle_proof = 6;
+        }
+
+        for(uint8 j = 0; j < values.length; j++) {
+
+            uint256 tmp = values[j] + seeds[j];
+            computed_hash = keccak256(abi.encode(tmp));
+
+            for(uint8 i = j*size_merkle_proof; i < (j+1)*size_merkle_proof; i++) {
+                
+                if (indexes[j] % 2 == 0) {
+                    // Hash(current computed hash + current element of the proof)
+                    computed_hash = keccak256(abi.encodePacked(computed_hash, merkle_proofs[i]));
+                } else {
+                    // Hash(current element of the proof + current computed hash)
+                    computed_hash = keccak256(abi.encodePacked(merkle_proofs[i], computed_hash));
+                }
+                indexes[j] = indexes[j] / 2;
+            }
+
+            if(computed_hash != merkle_root_ver) {
+                games[gameId].cheat = true;
+                games[gameId].winner = opposer;
+            }
+        }
+
+        if(values.length != games[gameId].counter_ships) {
+            games[gameId].cheat = true;
+            games[gameId].winner = opposer;
+        }
+        
+        games[gameId].winner = msg.sender;
+        emit ValidCheck(gameId, msg.sender, games[gameId].cheat, opposer);
+    }
+
+
+    /*
+        Phase 8.1:
+            - Valid gameId
+            - Only players of game can make the final transaction
+            - There must be a cheter
+            - Game must be not ended
+
+            Vulnerabilities
+    */
+    function endGameCheater(uint8 gameId, address shooter) public payable{
+
+        require(valid_ids[gameId], "Invalid game identifier");
+        require(games[gameId].cheat == true, "No cheater in game");
+        require(games[gameId].end_game == true, "Game is not ended");
+
+        if (msg.sender != games[gameId].creator && msg.sender != games[gameId].player) {
+            revert("You are not creator or player of this game");
+        }
+
+        games[gameId].winner = shooter;
+        uint256 amount = games[gameId].deposit;
+        games[gameId].deposit = 0;
+
+        payable(shooter).transfer(amount);
+
+        endGame(gameId);
+
+    }
+
+
+    /*
+        Phase 8.2:
+            - Valid gameId
+            - Only players of game can make final transaction
+            - Game must be ended
+            - No cheater
+
+            Vulnerabilities
+    */
+    function transactionEndGame(uint8 gameId, address receiver) public payable{
+        
+        require(valid_ids[gameId], "Invalid game identifier");
+        require(games[gameId].cheat == false, "There is a cheater in the game");
+        require(games[gameId].end_game == true, "Game is not ended");
+
+        if (msg.sender != games[gameId].creator && msg.sender != games[gameId].player) {
+            revert("You are not creator or player of this game");
+        }
+        games[gameId].winner = receiver;
+
+        uint256 amount = games[gameId].deposit;
+
+        games[gameId].deposit = 0;
+
+        payable(games[gameId].creator).transfer(amount/2);
+        payable(games[gameId].player).transfer(amount/2);
+
+        endGame(gameId);
+    }
+
+
+
+    /*
+        Phase 8.3:
+            - Valid gameId
+            - There must be a winner
+            - Deposit must be setted to 0.
+
+            Vulnerabilities
+    */
+    function endGame(uint8 gameId) private{
+
+        require(valid_ids[gameId], "Invalid game identifier");
+        require(games[gameId].winner != address(0), "No winner for this game");
+        require(games[gameId].deposit == 0, "Deposit wasn't at 0.");
+        
+
+        deleteItem(gameIds, gameId);
+        delete(valid_ids[gameId]);
+    }
+
+    function deleteItem(uint8[] storage arr, uint8 item) private{
+        
+        uint8 index;
+        
+         for(uint8 i = 0; i < arr.length - 1; i++) {
+            if(item == arr[i]) {
+                index = i;
+            }
+        }
+
+        for (uint i = index; i < arr.length - 1; i++) {
+            arr[i] = arr[i + 1];
+        }
+
+        arr.pop();
     }
 }

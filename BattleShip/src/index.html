@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<body>
+  <head id="header">
+      <meta charset="utf-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+      <title>BATTLESHIP GAME</title>
+      <!-- Bootstrap -->
+      <link href="/css/bootstrap.min.css" rel="stylesheet">
+
+      <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+      <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+      <!--[if lt IE 9]>
+          <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+          <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+        <![endif]-->
+  </head>
+
+  <!-- Title -->
+  <div class="title">
+    <div class="row">
+      <h1 class="text-center">BATTLESHIP GAME IN ETHEREUM</h1>
+      <br/>
+    </div>
+  </div>
+
+    <!-- MAIN MENU PAGE -->
+  <div class="main-page", id="mainMenu">
+    <div class="mainImage">
+      <img class="image" src="../images/ships.jpg" alt="">
+    <div class="block-menu">
+      <br/>
+      <br/>
+      <!-- Create New Game Button-->
+      <div>
+        <button class="btn btn-default" type="button" id="createNewGame-btn">Create Game</button>
+      </div>
+      <hr/>
+      <!-- Find Game Random -->
+      <div>
+        <button class="btn btn-default" type="button", id="findGameRandom-btn">Join Random Game</button>
+      </div>
+      <hr/>
+      <!-- Find Game with Identifier -->
+      <form>
+        <h3 class="font-weight-bold">JOIN GAME WITH ID</h3>
+        <input id="gameIdentifier" type="text" value="" name="gameId">
+        <button class="btn btn-default" type="button", id="findIdGame-btn">Find</button>
+      </form>
+    </div>
+    </div>
+  </div>
+
+  <!-- GAME CREATION PAGE -->
+  <div hidden class="main-page", id="creationGame">
+    <h2 class="game-title">NEW GAME</h2>
+    <br/>
+    <div class="backgroundImage">
+      <img class="image" src="../images/ships.jpg" alt="">
+    </div>
+    <div class="block-creation">
+      <div class="sections">
+        <!-- Board Dimension -->
+        <div class="board-section">
+          <div id="boardSizeSelection", class="board-size-selection">
+            <h3 class="font-weight-bold">BOARD SIZE</h3>
+            <label for="selectValue"></label>
+            <select id="selectValue">
+              <option value="2">2x2</option>
+              <option value="4">4x4</option>
+              <option value="8">8x8</option>
+            </select>
+          </div>
+        </div>
+        <!-- Deposit -->
+        <div class="deposit-section">
+          <hr/>
+          <h3 class="font-weight-bold">DEPOSIT</h3>
+          <input id="depositInput", class="deposit-input" type="number" placeholder="Enter ETHs">
+        </div>
+        <!-- Create Game -->
+        <hr/>
+        <div>
+          <button class="btn btn-default" type="button" id="createGame-btn">Create Game</button>
+        </div>
+        <br/>
+        <div class="back-menu-button">
+          <button class="btn btn-default" type="button" id="backToMainMenu-btn">Back Menu</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WAITING ROOM CREATOR PAGE -->
+  <div hidden class="main-page", id="waitingRoomCreator">
+    <div id="game-info"></div>
+    <div class="loading">
+      <div class="loader"></div>
+      <br/>
+      <br/>
+      <br/>
+      <br/>
+      <br/>
+      <br/>
+      <p>Waiting for a player...</p>
+    </div>
+    <div class="back-menu-button">
+      <button class="btn btn-default" type="button" id="deleteGame-btn">Delete Game</button>
+    </div>
+    <br/>
+    <br/>
+    <br/>
+  </div>
+
+
+  <!-- NEW PROPOSE BANNER -->
+  <div hidden class="main-page" id="propose-popup">
+    <div id="block1" class="popup">
+    <p>Someone wants to play making a deposit propose</p>
+    <h3 class="font-weight-bold">Do you want to accept?</h3>
+    <div id="proposeVariable"></div>
+        <input id="acceptPropose-btn" type="submit" value="Yes"/>
+        <input id="declinePropose-btn" type="submit" value="No"/>
+    </div>
+  </div>
+
+
+  <!-- WAITING ROOM PLAYER PAGE -->
+  <div hidden class="main-page", id="waitingRoomPlayer">
+    <div id="game-info-player"></div>
+    <p>If you want to play game, submit deposit or make a propose!</p>
+      <div id="depositTitle">
+        <button class="btn btn-default" type="button", id="payDeposit-btn", class="pay-deposit-button">Pay Deposit</button>
+        <br/>
+        <br/>
+        <br/>
+        <hr/>
+        <form class="propose-deposit", id="proposeDeposit">
+          <h3>Deposit Propose</h3>
+          <input id="proposeNewDeposit" type="text" value="" name="deposit">
+          <button class="btn btn-default" type="button", id="submitPropose-btn">Submit</button>
+        </form>
+      </div>
+  </div>
+
+
+  <!-- SHIP PLACEMENT PAGE -->
+  <div hidden class="main-page" id="shipPlacement">
+    <div hidden class="instruction" id="instruction2x2">
+      <div class="block-instruction">
+        <h1>STRATEGY MONITOR</h1>
+        <h3>Place ships following these rules:</h3>
+        <br/>
+          <p>2 x "Destroyers" - (1x1)</p>
+      </div>
+      <br/>
+      <br/>
+      <div id="shipAlert2"></div>
+    </div>
+    <div hidden class="instruction" id="instruction4x4">
+      <div class="block-instruction">
+        <h1>STRATEGY MONITOR</h1>
+        <h3>Place ships following these rules:</h3>
+        <br/>
+          <p>2 x "Submarines" - (3x1)</p>
+          <br/>
+          <p>5 x "Destroyers" - (1x1)</p>
+      </div>
+      <br/>
+      <br/>
+      <div id="shipAlert4"></div>
+    </div>
+    <div hidden class="instruction" id="instruction8x8">
+      <div class="block-instruction">
+        <h1>STRATEGY MONITOR</h1>
+        <h3>Place ships following these rules:</h3>
+        <br/>
+          <p>1 x "Carrier" - (8x1)</p>
+          <br/>
+          <p>1 x "Battleship" - (5x1)</p>
+          <br/>
+          <p>2 x "Submarines" - (3x1)</p>
+          <br/>
+          <p>4 x "Destroyers" - (1x1)</p>
+      </div>
+      <br/>
+      <br/>
+      <div id="shipAlert8"></div>
+    </div>
+    <div class="my-block-grid" id="positionGrid">
+      <h3>MY BOARD</h3>
+      <div id="my-grid-container" class="my-grid"></div>
+    </div>
+  </div>
+
+
+  <!-- GAME MONITOR PAGE -->
+  <div hidden class="main-page" id="gameMonitor">
+    <h1>BATTLE</h1>
+    <div id="counterOpposerShips"></div>
+    <br/>
+    <div id="turnCounter"></div>
+    <br/>
+    <br/>
+    <div class="accuse-button" id="accuseButton">
+      <button class="btn btn-default" type="button" id="submitAccuse-btn">Submit Accuse</button>
+    </div>
+    <div hidden class="accuse-button" id="checkButton">
+      <button class="btn btn-default" type="button" id="verifyAccuse-btn">Verify Accuse</button>
+    </div>
+    <div class="my-block-grid" id="battleGrid">
+      <h3>MY BOARD</h3>
+    </div>
+    <div class="opp-block-grid">
+      <h3>OPPOSER BOARD</h3>
+      <div id="opp-grid-container" class="opp-grid"></div>
+    </div>
+  </div>
+
+  <!-- VERIFICATION PAGE -->
+  <div hidden class="main-page", id="verificationPage">
+    <div class="loading">
+      <div class="loader"></div>
+      <br/>
+      <br/>
+      <br/>
+      <br/>
+      <br/>
+      <br/>
+      <p>Waiting for verification...</p>
+    </div>
+  </div>
+
+  
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/web3.min.js"></script>
+    <script src="js/truffle-contract.js"></script>
+    <script src="js/app.js"></script>
+    <script type="module">
+      import web3Utils from 'https://cdn.jsdelivr.net/npm/web3-utils@3.0.0-rc.0/+esm';
+  
+      window.addEventListener('DOMContentLoaded', () => {
+        window.web3Utils = web3Utils;
+  
+      });
+    </script>
+</body>
+</html>

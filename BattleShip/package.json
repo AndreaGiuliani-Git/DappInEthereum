@@ -8,18 +8,11 @@
   },
   "scripts": {
     "dev": "lite-server",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build-js": "browserify ./src/js/app.js -o ./public/bundle.js",
-    "watch-js": "watchify ./src/app.js -o ./public/bundle.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Andrea Giuliani",
   "license": "ISC",
   "devDependencies": {
     "lite-server": "2.3"
-  },
-  "dependencies": {
-    "browserify": "^17.0.0",
-    "ethers": "^6.7.1",
-    "watchify": "^4.0.0"
   }
 }
