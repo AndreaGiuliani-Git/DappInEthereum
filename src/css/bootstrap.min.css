@@ -8,7 +8,7 @@
 
 /* 
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  CSS blocks defined by me, specific for this web game
+  CSS blocks defined for this web game
   application.
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 */
@@ -28,6 +28,7 @@ SHIPS PLACEMENT ELEMENTS
   padding: 90px;
 }
 
+
 .my-block-grid {
   float: left;
   text-align: center;
@@ -36,9 +37,11 @@ SHIPS PLACEMENT ELEMENTS
   padding: 30px;
 }
 
+
 .ship {
   background: linear-gradient(to top, #10DB6F, #10DB6F), no-repeat top center;
 }
+
 
 .my-grid {
   display: grid;
@@ -50,6 +53,7 @@ SHIPS PLACEMENT ELEMENTS
   border-radius: 3px;
   background-color: #002966;
 }
+
 
 .my-cell8 {
   width: 58px;
@@ -64,6 +68,7 @@ SHIPS PLACEMENT ELEMENTS
   background-color: #1a75ff;
 }
 
+
 .my-cell4 {
   width: 120px;
   height: 120px;
@@ -76,6 +81,7 @@ SHIPS PLACEMENT ELEMENTS
   align-items: center;
   background-color: #1a75ff;
 }
+
 
 .my-cell2 {
   width: 240px;
@@ -106,6 +112,7 @@ GAME MONITOR ELEMENTS
   padding: 30px;
 }
 
+
 .opp-grid {
   display: grid;
   width: 500px;
@@ -132,6 +139,7 @@ GAME MONITOR ELEMENTS
   background-position: center; 
 }
 
+
 .opp-cell4 {
   width: 120px;
   height: 120px;
@@ -144,6 +152,7 @@ GAME MONITOR ELEMENTS
   align-items: center;
   background-color: #1a75ff;
 }
+
 
 .opp-cell2 {
   width: 240px;
@@ -159,7 +168,6 @@ GAME MONITOR ELEMENTS
 }
 
 
-
 /* 
 ----------------------------------------
 MAIN MENU ELEMENTS
@@ -172,6 +180,7 @@ MAIN MENU ELEMENTS
   text-align: center;
 }
 
+
 .block-menu {
   position: absolute;
   left: 42%;
@@ -183,6 +192,7 @@ MAIN MENU ELEMENTS
   background-color: white;
 }
 
+
 .backgroundImage {
   float: left;
   text-align:center;
@@ -192,11 +202,11 @@ MAIN MENU ELEMENTS
   padding: 10px;
 }
 
+
 .image {
   max-height: 100%;
   max-width: 100%;
 }
-
 
 
 /* 
@@ -204,10 +214,12 @@ MAIN MENU ELEMENTS
 CREATE GAME ELEMENTS
 ----------------------------------------
 */
+
 .sections {
   height: 403px;
   width: 600px;
 }
+
 
 .block-creation {
   float: right;
@@ -218,13 +230,13 @@ CREATE GAME ELEMENTS
   padding: 100px;
   border: 1px solid #000;
 }
-  
+
+
 .text-center {
   text-align: center;
   background: rgb(0, 82, 204, 0.7);
   padding: 1%;
 }
-
 
 
 /* 
@@ -236,6 +248,7 @@ WAITING ROOM ELEMENTS
 #waitingRoomPlayer {
   padding: 1%;
 }
+
 
 .popup {
   height: 100%;
@@ -252,6 +265,7 @@ WAITING ROOM ELEMENTS
   border: 5px solid #000;
   text-align: center;
 }
+
 
 .loading{
   margin: 0;
@@ -271,6 +285,7 @@ WAITING ROOM ELEMENTS
   animation: spin 1s linear infinite;
 }
 
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -286,6 +301,7 @@ GAME MONITOR ELEMENTS
  .hit {
   background: linear-gradient(to top, #E91919, #E91919), no-repeat top center;
  }
+
 
  .miss {
   background: linear-gradient(to top, #06A6E1, #06A6E1), no-repeat top center;

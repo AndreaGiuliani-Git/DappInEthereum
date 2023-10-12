@@ -1,41 +1,28 @@
+const scale = 1000000000000000000;
+
 var gameId = null;
 var deposit = null;
 var board_size = null;
 var counter_ship = null;
 var proposed_deposit = null;
 var remaining_ships = null;
-
-const scale = 1000000000000000000;
-
 var my_board;
-var agreement = null;
 var money = null;
-
-let my_cell_name;
-let opp_cell_name;
-
+var my_cell_name = null;
+var opp_cell_name = null;
 var merkle_root = null;
 var merkle_tree = [];
 var seed_matrix = [];
 var result = null;
-
 var my_turn = null;
 var ship_alert = null;
-
 var counter_ship_opp = null;
-
 var row = null;
 var col = null;
 var cell = null;
-
 var accuse = false;
 
 
-
-// var gameStarted = false;
-// var iHostTheGame = false;
-// var isMyTurn = false;
-// var iWasAccused = false;
 App = {
   web3Provider: null,
   contracts: {},
@@ -86,8 +73,6 @@ App = {
     $(document).on("click", "#submitAccuse-btn", App.submitAccuse);
     $(document).on("click", "#verifyAccuse-btn", App.verifyAccuse);
 
-    console.log("Button listeners loaded!");
-
   },
 
   newGameView: function () {
@@ -116,7 +101,6 @@ App = {
         return;
       }
 
-      //Call smart contract function, adding also the amount of eths to pay deposit.
       App.contracts.BattleShip.deployed().then(async function (instance) {
         battleshipInstance = instance;
         return battleshipInstance.createGame(board_size, deposit*scale, { value: (deposit*scale) });
@@ -124,7 +108,6 @@ App = {
 
         gameId = event.logs[0].args.gameId.toNumber();
         counter_ship = event.logs[0].args.counter_ships.toNumber();
-        agreement = false;
 
         document.getElementById("creationGame").style.display = "none";
         document.getElementById("waitingRoomCreator").style.display = "block";
@@ -137,6 +120,7 @@ App = {
       });
     }
   },
+
 
 /*
 * Creator can delete a game only if no players have already 
@@ -159,6 +143,7 @@ App = {
       window.alert("Someone is interested in your game. You cannot delete the game now.")
     }
   },
+
 
   backToMainMenu: function () {
     document.getElementById("creationGame").style.display = "none";
@@ -240,7 +225,6 @@ App = {
     }).then(async function (event) {
 
       gameId = event.logs[0].args.gameId.toNumber();
-      agreement = true;
 
       document.getElementById("waitingRoomPlayer").style.display = "none";
       document.getElementById("shipPlacement").style.display = "block";
@@ -268,7 +252,6 @@ App = {
     }).then(async function (event) {
 
       deposit = event.logs[0].args.eths.toNumber()/scale;
-      agreement = event.logs[0].args.agreement;
 
       document.getElementById("game-info").innerHTML = `<div><h2>GAMEID: ${gameId}</h2><h2>BOARD SIZE: ${board_size}</h2><h2>DEPOSIT: ${deposit} ETHs</h2><hr/></div>`;
     
@@ -278,7 +261,7 @@ App = {
   },
 
   findGame: async function (rand) {
-    //Find game with id, if there is a game,
+
     if (!rand) {
       var identifier = document.getElementById("gameIdentifier").value;
 
@@ -302,6 +285,7 @@ App = {
       }).catch(function (err) {
         console.log(err.message);
       });
+
     } else {
       App.contracts.BattleShip.deployed().then(async function (instance) {
         battleshipInstance = instance;
@@ -327,7 +311,9 @@ App = {
   },
 
   submitPropose: function () {
+
     var amount_prop = document.getElementById("proposeNewDeposit").value;
+
     App.contracts.BattleShip.deployed().then(async function (instance) {
       battleshipInstance = instance;
       return battleshipInstance.proposeDeposit(gameId, (amount_prop*scale));
@@ -363,10 +349,8 @@ App = {
 
     }
 
-
     if (remaining_ships == 0) {
       App.merkleTree();
-
 
       counter_ship_opp = counter_ship;
       var myDiv = document.getElementById('my-grid-container');
@@ -381,8 +365,6 @@ App = {
 
   merkleTree: function() {
     
-
-    // leaves creation in Merkle Tree
     var temp = [];
 
     for (let i = 0; i < board_size; i++) {
@@ -402,7 +384,6 @@ App = {
     console.log(seed_matrix)
     merkle_tree.push(temp);
 
-    // creation of the inside nodes
     while (temp.length > 1) {
       const next = [];
       for (let j = 0; j < temp.length; j+=2) {
@@ -443,7 +424,6 @@ App = {
   shotTorpedo: function(location) {
 
     if(my_turn) {
-
       if(accuse) {
         App.removeAccuse();
       }
@@ -454,7 +434,7 @@ App = {
       let ciao = cell.className.indexOf("hit") >= 0
 
       if (cell.className.indexOf("hit") >= 0  || cell.className.indexOf("miss") >= 0) {
-        window.alert("Cell unavailable, already shot torpedo here");
+        window.alert("Cell unavailable, torpedo already shot here");
       } else {
         App.contracts.BattleShip.deployed().then(async function (instance) {
           battleshipInstance = instance;
@@ -514,7 +494,7 @@ App = {
       App.contracts.BattleShip.deployed().then(async function (instance) {
         battleshipInstance = instance;
         return battleshipInstance.submitAccuse(gameId);
-      }).then(async function (event) {
+      }).then(async function () {
 
         window.alert("Accuse submit! Check if your opposer has pass time limit");
         document.getElementById("accuseButton").style.display = "none";
@@ -533,7 +513,7 @@ App = {
     App.contracts.BattleShip.deployed().then(async function (instance) {
       battleshipInstance = instance;
       return battleshipInstance.removeAccuse(gameId);
-    }).then(async function (event) {
+    }).then(async function () {
  
       document.getElementById("accuseButton").style.display = "block";
       accuse = false;
@@ -584,8 +564,6 @@ App = {
       battleshipInstance = instance;
       return battleshipInstance.verifyEndGame(gameId, indexes, ships, seeds, merkle_proof);
     }).then(async function (event) {
-
-
 
       App.transaction(event.logs[0].args.tx_sender, event.logs[0].args.opposer, event.logs[0].args.cheat);
 
@@ -673,7 +651,6 @@ App = {
         } else if (events.event == "ChangeDeposit" && events.args.tx_sender != web3.eth.defaultAccount) {
 
           deposit = events.args.eths/scale;
-          agreement = events.args.agreement;
           
           document.getElementById("game-info-player").innerHTML = `<h2>GAMEID: ${gameId}</h2><h2>BOARD SIZE: ${board_size}</h2><h2>NEW DEPOSIT: ${deposit} ETHs</h2><hr/>`;
           window.alert("Your propose was accepted by creator. You must pay new deposit to play.");

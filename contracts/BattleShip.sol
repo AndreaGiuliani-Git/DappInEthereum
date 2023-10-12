@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT 
 pragma  solidity >=0.4.22 <0.9.0;
 
-
-
 contract BattleShip {
 
     struct infoGame{
@@ -54,20 +52,20 @@ contract BattleShip {
     constructor(){}
 
     /*
-    * Admitted board size are 4, 8. (reference for 4x4, 8x8)
+    * Admitted board size are 2, 4, 8. (reference for 2x2, 4x4, 8x8)
     */
     function checkBoard(uint8 size) private pure returns (bool){
         return (size == 2 || size == 4 || size == 8);
     }
 
     /*
-        Phase 1:
-            - board of correct size
+        Phase 1 Req:
+            - Board of correct size
             - Eths must be equal to deposit
             - Until 256 games at the same time
 
-            Vulnerabilities:
-            - One single creator can have 255 games opened --> DOS attack
+        Vulnerabilities:
+        - One single creator can have 255 games opened --> DoS attack
     */ 
     function createGame(uint8 board_size, uint256 deposit) public payable{
 
@@ -98,7 +96,7 @@ contract BattleShip {
             games[id].counter_ships_player = games[id].counter_ships;
             games[id].counter_ships_creator = games[id].counter_ships;
         } else if (board_size == 4) {
-            games[id].counter_ships = 7;
+            games[id].counter_ships = 6;
             games[id].counter_ships_player = games[id].counter_ships;
             games[id].counter_ships_creator = games[id].counter_ships;
         } else if (board_size == 8) {
@@ -111,14 +109,12 @@ contract BattleShip {
 
 
    /*
-        Phase 1.1:
+        Phase 1.1 Req:
             - Valid gameId
             - Only creator can delete him/her game
             - No agreement with player
 
-            Vulnerabilities:
-
-            +All deposit is sent to the creator when he/she deletes a game.
+        + All deposit is sent to the creator when he/she deletes a game.
     */
     function deleteGame(uint8 gameId) public{
 
@@ -138,8 +134,10 @@ contract BattleShip {
 
 
     /*
-        Phase 2:
-            - Game empty from a player
+        Phase 2 Req:
+            - Game free
+            - Creator cannot join in his/her game
+            - At least one game created
     */
     function joinGameRandom() public{
         require(gameIds.length > 0, "There aren't already games.");
@@ -173,12 +171,11 @@ contract BattleShip {
 
 
     /*
-        Phase 2:
+        Phase 2 Req:
             - Available game
             - An existing gameId
             - You must be not the creator of the game
-
-            Vulnerabilities:
+            - Creator cannot join his/her game
     */
     function joinGameId(uint8 gameId) public{
 
@@ -200,14 +197,12 @@ contract BattleShip {
     }
 
     /*
-        Phase 2.1:
+        Phase 2.1 Req:
             - Valid gameId
             - Only player of this game can propose a deposit
             - No zero value
             - No same value of deposit as before
             - No previous agreement for deposit
-
-            Vulnerabilities
     */
     function proposeDeposit(uint8 gameId, uint256 new_deposit) public{
 
@@ -229,14 +224,12 @@ contract BattleShip {
 
 
     /*
-        Phase 2.2:
+        Phase 2.2 Req:
             - Valid gameId
             - Only player of this game can propose a deposit
             - No zero value
             - No same value of deposit as before
             - No previous agreement for deposit
-
-            Vulnerabilities
     */
     function changeDeposit(uint8 gameId) public payable{
 
@@ -265,13 +258,11 @@ contract BattleShip {
 
 
     /*
-        Phase 3:
+        Phase 3 Req:
             - Valid gameId
             - Only player can pay to start the game
             - Eths in transaction must be equal to the deposit
             - No previous agreement 
-
-            Vulnerabilities
     */
     function payDeposit(uint8 gameId) public payable{
 
@@ -293,13 +284,11 @@ contract BattleShip {
 
 
     /*
-        Phase 4:
+        Phase 4 Req:
             - Valid gameId
             - Only players of game can submit merkleRoot
             - No previous merkleRoot stored 
             - 0 value for merkle root is not accepted
-
-            Vulnerabilities
     */
     function submitMerkleRoot(uint8 gameId, bytes32 merkle_root) public{
 
@@ -322,7 +311,7 @@ contract BattleShip {
 
 
     /*
-        Phase 5:
+        Phase 5 Req:
             - Valid gameId
             - Only players of game can shot
             - Ony one shot per turn
@@ -330,10 +319,8 @@ contract BattleShip {
             - Game must be not ended
             - No cheater
 
-            Vulnerabilities
-
-            + Creator cannot shot until player has submitted the merkle root, and
-            player can't shot first!!
+        + Creator cannot shot until player has submitted the merkle root, and
+        player can't shot first!!
 
     */
     function shotTorpedo(uint8 gameId,  uint8 col, uint8 row) public{
@@ -364,14 +351,11 @@ contract BattleShip {
 
 
     /*
-        Phase 5.1:
+        Phase 5.1 Req:
             - Valid gameId
             - Only players of game can check 
             - Game must be not ended
             - No cheater in the game
-
-            Vulnerabilities
-
     */
     function shotResult(uint8 gameId, uint8 col, uint8 row, bool result, bytes32 computed_hash, bytes32[] memory merkle_proof) public payable{
 
@@ -456,13 +440,10 @@ contract BattleShip {
 
 
     /*
-        Phase 6:
+        Phase 6 Req:
             - Valid gameId
             - Only players of game can accuse
             - No other accused player
-
-            Vulnerabilities
-
     */
     function submitAccuse(uint8 gameId) public{
 
@@ -489,13 +470,10 @@ contract BattleShip {
     }
 
     /*
-        Phase 6.1:
+        Phase 6.1 Req:
             - Valid gameId
             - Only players of game can check accuse
             - There must be one accuse
-
-            Vulnerabilities
-
     */
     function verifyAccuse(uint8 gameId) public payable{
 
@@ -515,14 +493,11 @@ contract BattleShip {
 
 
     /*
-        Phase 6.2:
+        Phase 6.2 Req:
             - Valid gameId
             - Only players of game can check accuse
             - There must be one accuse
             - Address of accused must be equal to msg.sender
-
-            Vulnerabilities
-
     */
     function removeAccuse(uint8 gameId) public{
         require(valid_ids[gameId], "Invalid game identifier");
@@ -540,14 +515,11 @@ contract BattleShip {
 
 
     /*
-        Phase 7:
+        Phase 7 Req:
             - Valid gameId
             - Only players of game can verify the end of game
             - Game must be finished
             - No previous cheaters in the game
-
-            Vulnerabilities
-
     */
     function verifyEndGame(uint8 gameId, uint256[] memory indexes, uint256[] memory values, uint256[] memory seeds, bytes32[] memory merkle_proofs) public{
 
@@ -612,13 +584,11 @@ contract BattleShip {
 
 
     /*
-        Phase 8.1:
+        Phase 8.1 Req:
             - Valid gameId
             - Only players of game can make the final transaction
             - There must be a cheter
             - Game must be not ended
-
-            Vulnerabilities
     */
     function endGameCheater(uint8 gameId, address shooter) public payable{
 
@@ -642,13 +612,11 @@ contract BattleShip {
 
 
     /*
-        Phase 8.2:
+        Phase 8.2 Req:
             - Valid gameId
             - Only players of game can make final transaction
             - Game must be ended
             - No cheater
-
-            Vulnerabilities
     */
     function transactionEndGame(uint8 gameId, address receiver) public payable{
         
@@ -674,12 +642,10 @@ contract BattleShip {
 
 
     /*
-        Phase 8.3:
+        Phase 8.3 Req:
             - Valid gameId
             - There must be a winner
             - Deposit must be setted to 0.
-
-            Vulnerabilities
     */
     function endGame(uint8 gameId) private{
 
@@ -691,6 +657,7 @@ contract BattleShip {
         deleteItem(gameIds, gameId);
         delete(valid_ids[gameId]);
     }
+    
 
     function deleteItem(uint8[] storage arr, uint8 item) private{
         
